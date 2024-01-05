@@ -1,0 +1,111 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App</title>
+    <link href="{{ url_for('static', filename='styles/style.css') }}" rel="stylesheet"/>
+</head>
+<body>
+    <h1>Check Severe Weather</h1>
+    <!-- Display flash messages -->
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i>{{ messages[0] }}
+            </div>
+            <style>
+                .alert {
+                    background-color: red;
+                }
+            </style>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Display form -->
+    <form method="POST" action="/weather">
+        <!-- Existing City and State Code Inputs -->
+    <div class="input-row">
+        <label for="city">City:</label>
+        <input type="text" id="city" name="city" placeholder="Enter city here"> <!-- removed required to allow for blank in the input form-->
+
+        <label for="state_code">State Code (e.g. MN):</label>
+        <input type="text" id="state_code" name="state_code" maxlength="2" pattern="[A-Za-z]{2}" placeholder="Enter state here"> <!-- removed required to allow for blank in the input form-->
+    </div>
+    <style>
+        .input-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+        <!-- New Address Input for Geocoding -->
+        <label for="address"> Input address to see it on Google map (Enter in this format: 1234 clear lake road, Houston, TX 77058 ):</label>
+        <input type="text" id="address" name="address" placeholder="Enter your address">  <!-- This is where user can input address -->
+
+        <!-- Selection for GPS Source -->
+        <select id="gpsSource" name="gpsSource">
+            <option value="address">Use my inputted address(recommended)</option>
+            <option value="drone">Use a connected Drone's GPS</option>
+        </select>
+        <style>
+
+            select#gpsSource {
+                font-size: 20px; /* change the font size */
+                color: black; /* change the text color */
+                background-color: #f8f8f8; /* change the background color */
+            }
+        </style>
+
+        <div class="submit-container">
+            <label for="gpsSource"> (Type in city, city and state, or your address, then click Submit):</label>
+            <!-- Your submit button here -->
+            <button type="submit">Submit</button>
+        </div>
+        <style>
+            .submit-container {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+        </style>
+    </form>
+    <!-- Add loading spinner -->
+    <div id="loading" style="display: none;">
+        <div class="spinner"></div>
+        <p>Loading, please wait...</p>
+    </div>
+    <style>
+        #loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        </style>
+    <style>
+        .spinner {
+            border: 16px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 16px solid #3498db;
+            width: 120px;
+            height: 120px;
+            animation: spin 2s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        </style>
+        <script>
+            document.querySelector('form').addEventListener('submit', function() {
+                document.getElementById('loading').style.display = 'block';
+            });
+            
+            window.addEventListener('load', function() {
+                document.getElementById('loading').style.display = 'none';
+            });
+            </script>
+</body>
+</html>

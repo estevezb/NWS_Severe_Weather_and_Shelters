@@ -1,0 +1,339 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        function initMap() {
+            // Default latitude and longitude
+            var defaultLat = 44.7295819 // Default latitude
+            var defaultLng = -93.3436059 // Default longitude
+            // Initialize the Google Map
+            var mapOptions = {
+                center: new google.maps.LatLng(defaultLat, defaultLng), // Default to Minneapolis, MN or any other default
+                //center: new google.maps.LatLng({{ weather.latitude }}, {{ weather.longitude }}),
+                zoom: 10
+            };
+
+            var map = new google.maps.Map(document.getElementById("mapid"), mapOptions);
+
+            // Marker for the weather location
+            var weatherMarker = new google.maps.Marker({
+                position: new google.maps.LatLng({{ weather.latitude }}, {{ weather.longitude }}),
+                map: map,
+                title: 'Weather Location'
+            });
+
+            // Marker for the drone's position
+            var droneMarker = new google.maps.Marker({
+                position: new google.maps.LatLng({{ weather.latitude }}, {{ weather.longitude }}),  // Initial position
+                map: map,
+                title: 'Drone Position',
+                icon: {
+                    path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                    fillColor: 'red',
+                    fillOpacity: 1.0,
+                    strokeColor: 'red',
+                    strokeOpacity: 1.0,
+                    scale: 3, //pixels , default is 3 , adjust according to change the size of the marker
+                    rotation: 0 //degree , this is the default rotation angle
+
+                }
+
+            });
+
+
+            // Fetch telemetry data from the server
+            function fetchTelemetry() {
+                fetch('/telemetry')
+                    .then(response => response.json())
+                    .then(telemetry => {
+                        if ('lat' in telemetry && 'lon' in telemetry) {
+                            // Update drone marker position using the telemetry data
+                            var newLatLng = new google.maps.LatLng(telemetry.lat, telemetry.lon);
+                            droneMarker.setPosition(newLatLng);
+                            map.setCenter(newLatLng);
+                        }
+                    });
+            }
+
+            // New function to handle map updates based on user address or default address
+            function fetchAndUpdateMap(address) {
+                fetch('/geocode-address', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        address: address
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Geocode request failed with status ${response.status}`);  // Throw an error if the response is not OK
+                    }
+                    return response.json();  // Return the JSON response
+                })
+                .then(data => {
+                    console.log("Geocode response:", data);  // Debugging log
+                    if (data.latitude && data.longitude) {
+                        // Update the map center
+                        var newLatLng = new google.maps.LatLng(data.latitude, data.longitude);
+                        map.setCenter(newLatLng);
+                        // Update the drone marker position
+                        if (droneMarker) {
+                            droneMarker.setPosition(newLatLng);
+                        } else {
+                            droneMarker = new google.maps.Marker({
+                                position: newLatLng,
+                                map: map,
+                                title: 'Drone Position',
+                                icon: {
+                                    url: '{{ url_for("static", filename="images/drone_baby.png") }}',
+                                    scaledSize: new google.maps.Size(64, 64)
+                                }
+                            });
+                        }
+                    } else {
+                        console.error("Geocode response did not contain latitude and longitude or no GPS data received:", data);
+                    }
+                })
+                .catch(error => {
+                    console.error("Error fetching geocode data, Invalid or no GPS data received:", error);
+                });
+                
+        }
+
+
+            // Add new function here
+            function fetchNWSAlerts() {
+            let stateCode = document.getElementById('stateCode').value;  // Get the state code from the hidden input field
+            // After the /weather page has loaded without error
+            var width = 0;
+            var interval = setInterval(function() {
+                if (width < 100) {
+                    width++;
+                    document.getElementById('progress-bar').style.width = width + '%';
+                } else {
+                    clearInterval(interval);
+                }
+            }, 750); // Update the progress bar every 750 milliseconds, value is in milliseconds, will update bar every 0.75 seconds
+
+                fetch(`/nws-alerts?state=${stateCode}`)
+                    .then(response => response.json())
+                    .then(alerts => {
+                        console.log("Fetched NWS Alerts:", alerts);  // Debugging log
+
+                        if (alerts && alerts.features) {
+                            // Create a dictionary to map event types to colors
+                            const eventColors = {
+                                'Tornado Watch': '#ffff00', //Yellow
+                                'Tornado Warning': '#ed0909', //Red
+                                'Severe Thunderstorm Warning': '#ffa500', //Orange
+                                'Severe Weather Statement': '#00ffff', //Light Blue
+                                'Flash Flood Warning': '#8b0000', //Rust/Brownish
+                                'Winter Storm Warning': '#ff69b4', //Pink
+                                'Winter Storm Watch':'#4682b4', //Metallic Blue
+                                'High Wind Warning': '#daa520', //Dark Orange
+                                'High Wind Watch': '#b8860b', //Dark Orange brown
+                                'Flood Warning': '#00ff00', //Green
+                                'Flood Watch': '#2e8b57', // Dark Green
+                                'Gale Warning': '#dda0dd', //Light pink
+                                'Winter Weather Advisory': '#7b68ee', //Violet-Purple
+                                'Avalanche Watch' : '#f4a460', //Light Orange
+                                'Flood Advisory': '#00ff7f', //Neon,Bright Green
+                                'Heavy Freezing Spray Warning': '#00bfff', //Light Blue
+                                'Brisk Wind Advisory': '#FFA07A', //light pink
+                                'Wind Advisory': '#d2b48c', //Tan
+                                'Special Marine Warning':'#ffa500', //orange
+                                'Small Craft Advisory' : '#d8bfd8', //Light Salmon
+                                'Hazardous Seas Warning' : '#d8bfd8', //Light Salmon
+                                'Rip Current Statement' : '#40e0d0' , //Aqua green
+                                'Beach Hazards Statement': '#40e0d0', //Aqua green
+                                'Special Weather Statement': '##ffe4b5', //Peach
+                                'Marine Weather Statement': '##ffefd5', //Peach
+                                'Dense Fog Advisory': '#708090', // Light Slate Gray
+                                'Air Quality Alert': '#808080', // Grey
+                                // Add more event types and their color here
+                                'default': '#0000FF' // Blue for default color
+                            }
+                            // Filter out features without a valid polygon geometry
+                            const validFeatures = alerts.features.filter(feature => feature.geometry);
+                            console.log("Valid features with polygon geometry:", validFeatures);
+                            validFeatures.forEach(feature => {
+                                if (feature.geometry && feature.geometry.type === "Polygon") {
+                                    // Determine the color based on the type of alert
+                                    let color = eventColors[feature.properties.event] || eventColors['default'];
+
+
+                                    var polygon = new google.maps.Polygon({
+                                        paths: feature.geometry.coordinates[0].map(coord => ({ lat: coord[1], lng: coord[0] })),
+                                        strokeColor: color,
+                                        strokeOpacity: 0.8,
+                                        strokeWeight: 2,
+                                        fillColor: color,
+                                        fillOpacity: 0.35
+                                    });
+                                    polygon.setMap(map);
+
+                                    // Add an info window to the polygon
+                                    var infoContent = `
+                                        <strong>${feature.properties.event}</strong><br>
+                                        ${feature.properties.headline}<br>
+                                        <em>${feature.properties.description}</em>
+                                    `;
+
+                                    var infoWindow = new google.maps.InfoWindow({
+                                        content: infoContent
+                                    });
+
+                                    // Show the info window when the polygon is clicked
+                                    polygon.addListener('click', function (event) {
+                                        infoWindow.setPosition(event.latLng);
+                                        infoWindow.open(map);
+                                    });
+                                } else {
+                                    console.log("Skipped feature due to null or non-polygon geometry:", feature);
+                                }
+                            });
+                        }
+                        // Set the progress bar to 100% when the NWS alerts have been fetched
+                        document.getElementById('progress-bar').style.width = '100%';
+                        document.getElementById('progress-bar-text').style.display = 'none';
+                        clearInterval(interval);
+
+                        // Load shelter data after the NWS alerts have been fetched
+                        loadShelterData();
+                    })
+                    .catch (error => console.error("Error fetching NWS alerts:", error));
+
+            }
+            function loadShelterData(userlocation) {
+                // Load GeoJSON data from the server
+                var url = '/static/data/National_Shelter_System_Facilities.geojson';
+                map.data.loadGeoJson(url, null, function(features) {
+                    // Filter the features based on their distance from the user's location
+                    var filteredFeatures = features.filter(function(feature) {
+                        var shelterLocation = new google.maps.LatLng(
+                            feature.getProperty('latitude'),
+                            feature.getProperty('longitude')
+                        );
+                        var userLatLng = new google.maps.LatLng(userLocation.lat, userLocation.lng);
+                        var distance = google.maps.geometry.spherical.computeDistanceBetween(userLatLng, shelterLocation);
+                        return distance <= 16093.4; // 10 miles in meters
+                    });
+                    // Add a property to each GeoJSON feature
+                    filteredFeatures.forEach(function(feature) {
+                        feature.setProperty('isShelter', true);
+                    });
+
+
+                });
+                // Create an InfoWindow for the shelter markers
+                var infoWindow = new google.maps.InfoWindow();
+
+                // Add a click event listener to each shelter marker
+                map.data.addListener('click', function(event) {
+                    var myHTML = event.feature.getProperty('shelter_name') + "<br>" + 
+                        event.feature.getProperty('address_1') + "<br>" +
+                        event.feature.getProperty('city') + ", " + event.feature.getProperty('state') + " " + event.feature.getProperty('zip') + "<br>" +
+                        event.feature.getProperty('evacuation_capacity') + "<br>" +
+                        event.feature.getProperty('wheelchair_accessible') + "<br>" +
+                        event.feature.getProperty('generator_onsite') + "<br>" +
+                        event.feature.getProperty('self_sufficient_electricity') +"<br>" +
+                        event.feature.getProperty('shelter_status') + "<br>" +
+                        event.feature.getProperty('facility_type') + "<br>" +
+                        event.feature.getProperty('subfacility_code') ;
+                    infoWindow.setContent("<div style='width:150px; text-align: center;'>" + myHTML + "</div>");
+                    infoWindow.setPosition(event.feature.getGeometry().get());
+                    infoWindow.setOptions({pixelOffset: new google.maps.Size(0,-30)});
+                    infoWindow.open(map);
+                });
+
+                        
+                
+                map.data.setStyle(function(feature) {
+                    var isShelter = feature.getProperty('isShelter');
+                    var zoom = map.getZoom();
+                    var zoomThreshold = 12;
+                    
+                    if (isShelter && zoom >= zoomThreshold) {
+                        return {
+                            visible: true,
+                            icon: {
+                                path: google.maps.SymbolPath.CIRCLE,
+                                fillColor: 'blue',
+                                fillOpacity: 1,
+                                strokeColor: 'blue',
+                                strokeOpacity: 1,
+                                scale: 5 //pixels , default is 3 , adjust according to change the size of the marker
+                            }
+                        };
+                    } else if (isShelter) {
+                        return {
+                            visible: false
+                        };
+                    }
+
+                });
+                google.maps.event.addListener(map, 'zoom_changed', function() {
+                    map.data.setStyle(map.data.getStyle());
+                });
+
+            }
+            // Fetch telemetry data every 10 seconds
+            setInterval(fetchTelemetry, 100000);
+            // Fetch NWS alerts once when the page loads
+            fetchNWSAlerts();
+            
+
+        } // This closing brace is the end of the initMap function
+
+        // Fetch (add new function here) once when the page loads
+        function sendChat() {
+            var input = document.getElementById("chat-input").value; // Get the input value
+            fetch('/send-chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: input
+
+                })
+                
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('chat-output').innerHTML += '<p>' + data.response + '</p>';
+                document.getElementById('chat-input').value = ''; // Clear the input field
+            });
+        }
+    </script>
+    <!-- Google Maps JavaScript API -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDpTRDyepqe9o-aHCfjSv95m1QiSEHveiA&callback=initMap" async defer></script>
+</head>
+<body>
+    <h1>Severe Weather Tracker and Shelter Locations</h1>
+    <h2>Weather in {{ weather.city }}</h2>
+    <p>Temperature: {{ weather.temperature }} degrees F</p>
+    <p>Humidity: {{ weather.humidity }}%</p>
+    <p>Pressure: {{ weather.pressure }} inHg</p>
+    <p>Wind Speed: {{ weather.wind_speed }} mph</p>
+    <p>Wind Direction: {{ weather.wind_direction }}</p>
+    <p>Data recorded at: {{ weather.timestamp }}</p>
+    <div id="mapid" style="height: 500px; width: 100%;"></div>
+    <!-- Hidden input field to store the state code -->
+    <input type="hidden" id="stateCode" value="{{ weather.state_code }}">
+
+    <!-- progress bar -->
+    <div id="progress-bar-container" style="width: 100%; background-color: #f3f3f3;">
+        <div id="progress-bar" style="height: 24px; width: 0%; background-color: #4caf50;"></div>
+        <p id="progress-bar-text" style="position: absolute; width: 100%; height: 100%; text-align: center; line-height: 24px;">Severe Weather data loading, please wait...</p>
+    </div>
+</body>
+<!-- Chat Interface -->
+<div id="chat-container">
+    <div id="chat-output"></div>
+    <input type="text" id="chat-input" placeholder="Ask about the weather...">
+    <button onclick="sendChat()">Send</button>
+</div>
+</html>
