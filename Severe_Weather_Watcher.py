@@ -19,6 +19,12 @@ api_key_path_1 = r'C:\Users\Brian\Desktop\Drone\UAV_Weather_Watch\openai_api_key
 OPENAI_API_KEY = load_api_key(api_key_path_1) # Call the load_api_key() function and pass the path to the API key file as an argument. Assign the return value to the OPENAI_API_KEY variable.
 api_key_path_2 = r'C:\Users\Brian\Desktop\Drone\UAV_Weather_Watch\flask_session_key\flask_session_key.txt'
 FLASK_SECRET_KEY = load_api_key(api_key_path_2) # Call the load_api_key() function and pass the path to the API key file as an argument. Assign the return value to the OPENAI_API_KEY variable.
+# Path to the Open Weather Map API key file
+api_key_path_3 = r'C:\Users\Brian\Desktop\Drone\UAV_Weather_Watch\open_weatherapp_key\open_weather_api_key.txt'
+OPEN_WEATHER_MAP_API_KEY = load_api_key(api_key_path_3)
+# Path to the Google Maps API key file
+api_key_path_4 = r'C:\Users\Brian\Desktop\Drone\UAV_Weather_Watch\Google_map_api_key\google_api_key.txt'
+GOOGLE_MAPS_API_KEY = load_api_key(api_key_path_4)
 
 app = Flask(__name__)
 app.secret_key = FLASK_SECRET_KEY
@@ -129,7 +135,7 @@ def weather():
     state_code = request.form.get('state_code', '')  # Default to empty string if not provided
     address = request.form.get('address', '')  # Default to empty string if not provided
     gps_source = request.form.get('gpsSource', 'address')  # Default to 'address' if not provided
-    api_key = "946d9166a792eeae0ab4f16319d2de0b" # replace with your OpenWeatherMap API key
+    api_key = OPEN_WEATHER_MAP_API_KEY # replace with your OpenWeatherMap API key
 
     # Default to Minneapolis if all inputs are blank or improperly formatted
     if not city and not state_code and not address:
@@ -162,7 +168,7 @@ def weather():
         # Fetch NWS alerts for the state
         alerts_data = fetch_nws_alerts(state_code)
         # Pass both weather and alerts data to the frontend
-        return render_template('weather.html', weather=weather, alerts=alerts_data)
+        return render_template('weather.html', weather=weather, alerts=alerts_data, google_maps_key=GOOGLE_MAPS_API_KEY)
     else:
         return jsonify({'error': 'Failed to fetch weather data'}), 500
 
@@ -210,6 +216,9 @@ def print_weather(data, city=None, api_type='standard'):
     # Handle the response from the One Call API
     if api_type == 'onecall':
         current_weather = data.get('current', {})
+        weather_description = current_weather.get('weather', [{}])[0].get('description', 'N/A')
+        weather_icon_code = current_weather.get('weather', [{}])[0].get('icon', 'N/A')
+        weather_icon_url = f"http://openweathermap.org/img/wn/{weather_icon_code}.png"
         weather = {
             'city': city,
             'temperature': current_weather.get('temp', 'N/A'),
@@ -220,6 +229,8 @@ def print_weather(data, city=None, api_type='standard'):
             'timestamp': datetime.fromtimestamp(current_weather.get('dt', 0)),
             'latitude': data.get('lat', 'N/A'),
             'longitude': data.get('lon', 'N/A'),
+            'weather_description': weather_description,
+            'weather_icon': weather_icon_url,
         }
 
     # Handle the response from the standard weather API
