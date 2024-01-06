@@ -9,22 +9,17 @@ import os
 from geopy.geocoders import Nominatim
 from time import sleep
 
-def load_api_key(file_path):
-    with open(file_path, 'r') as file: # This opens the file in read mode and assigns it to the file variable. Recall that the names of parameters passed to a function are arbitrary and only have meaning within the function.
-        api_key = file.read().strip() # This reads the API key from the file and removes any whitespace using the strip() method which is a string method that removes whitespace from the beginning and end of a string.
-        print("API Key read from file:", api_key)  # Debugging line
-        return api_key # This reads the API key from the file and removes any whitespace using the strip() method which is a string method that removes whitespace from the beginning and end of a string.
+def load_api_key(env_var_name):
+    api_key = os.getenv(env_var_name)
+    if api_key is None:
+        raise Exception(f"Environment variable {env_var_name} is not set")
+    print(f"API Key read from environment variable {env_var_name}: {api_key}")  # Debugging line
+    return api_key
 #Load the API key
-api_key_path_1 = r'C:\Users\Brian\Desktop\Drone\UAV_Weather_Watch\openai_api_key\openai_api_key.txt'
-OPENAI_API_KEY = load_api_key(api_key_path_1) # Call the load_api_key() function and pass the path to the API key file as an argument. Assign the return value to the OPENAI_API_KEY variable.
-api_key_path_2 = r'C:\Users\Brian\Desktop\Drone\UAV_Weather_Watch\flask_session_key\flask_session_key.txt'
-FLASK_SECRET_KEY = load_api_key(api_key_path_2) # Call the load_api_key() function and pass the path to the API key file as an argument. Assign the return value to the OPENAI_API_KEY variable.
-# Path to the Open Weather Map API key file
-api_key_path_3 = r'C:\Users\Brian\Desktop\Drone\UAV_Weather_Watch\open_weatherapp_key\open_weather_api_key.txt'
-OPEN_WEATHER_MAP_API_KEY = load_api_key(api_key_path_3)
-# Path to the Google Maps API key file
-api_key_path_4 = r'C:\Users\Brian\Desktop\Drone\UAV_Weather_Watch\Google_map_api_key\google_api_key.txt'
-GOOGLE_MAPS_API_KEY = load_api_key(api_key_path_4)
+OPENAI_API_KEY = load_api_key('OPENAI_API_KEY')
+FLASK_SECRET_KEY = load_api_key('FLASK_SECRET_KEY')
+OPEN_WEATHER_MAP_API_KEY = load_api_key('OPEN_WEATHER_MAP_API_KEY')
+GOOGLE_MAPS_API_KEY = load_api_key('GOOGLE_MAPS_API_KEY')
 
 app = Flask(__name__)
 app.secret_key = FLASK_SECRET_KEY
