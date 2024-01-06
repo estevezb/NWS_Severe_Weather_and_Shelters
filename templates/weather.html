@@ -10,7 +10,7 @@
             var mapOptions = {
                 center: new google.maps.LatLng(defaultLat, defaultLng), // Default to Minneapolis, MN or any other default
                 //center: new google.maps.LatLng({{ weather.latitude }}, {{ weather.longitude }}),
-                zoom: 10
+                zoom: 12
             };
 
             var map = new google.maps.Map(document.getElementById("mapid"), mapOptions);
@@ -21,6 +21,8 @@
                 map: map,
                 title: 'Weather Location'
             });
+
+
 
             // Marker for the drone's position
             var droneMarker = new google.maps.Marker({
@@ -92,6 +94,7 @@
                                 }
                             });
                         }
+
                     } else {
                         console.error("Geocode response did not contain latitude and longitude or no GPS data received:", data);
                     }
@@ -200,84 +203,66 @@
                         document.getElementById('progress-bar-text').style.display = 'none';
                         clearInterval(interval);
 
-                        // Load shelter data after the NWS alerts have been fetched
-                        loadShelterData();
+                        loadShelterData();  // Load the shelter data after the NWS alerts have been fetched
                     })
                     .catch (error => console.error("Error fetching NWS alerts:", error));
 
             }
-            function loadShelterData(userlocation) {
+            function loadShelterData() {
+                console.log('loadShelterData called'); // Debugging log
+
                 // Load GeoJSON data from the server
                 var url = '/static/data/National_Shelter_System_Facilities.geojson';
                 map.data.loadGeoJson(url, null, function(features) {
-                    // Filter the features based on their distance from the user's location
-                    var filteredFeatures = features.filter(function(feature) {
-                        var shelterLocation = new google.maps.LatLng(
-                            feature.getProperty('latitude'),
-                            feature.getProperty('longitude')
-                        );
-                        var userLatLng = new google.maps.LatLng(userLocation.lat, userLocation.lng);
-                        var distance = google.maps.geometry.spherical.computeDistanceBetween(userLatLng, shelterLocation);
-                        return distance <= 16093.4; // 10 miles in meters
-                    });
-                    // Add a property to each GeoJSON feature
-                    filteredFeatures.forEach(function(feature) {
-                        feature.setProperty('isShelter', true);
-                    });
+                    console.log("GeoJSON features loaded:", features); // Debugging log
 
+                    // Set the map style based on the zoom level
+                    google.maps.event.addListener(map, 'zoom_changed', function() {
+                        var zoom = map.getZoom();
+                        var zoomThreshold = 13;
 
+                        map.data.setStyle(function(feature) {
+                            if (zoom >= zoomThreshold) {
+                                return {
+                                    visible: true,
+                                    icon: {
+                                        path: google.maps.SymbolPath.CIRCLE,
+                                        fillColor: 'blue',
+                                        fillOpacity: 1,
+                                        strokeColor: 'blue',
+                                        strokeOpacity: 1,
+                                        scale: 3 //pixels , default is 3 , adjust according to change the size of the marker
+                                    }
+                                };
+                            } else  {
+                                return {
+                                    visible: false
+                                };
+                            }
+                        });
+                    });
                 });
+
                 // Create an InfoWindow for the shelter markers
                 var infoWindow = new google.maps.InfoWindow();
 
                 // Add a click event listener to each shelter marker
                 map.data.addListener('click', function(event) {
-                    var myHTML = event.feature.getProperty('shelter_name') + "<br>" + 
-                        event.feature.getProperty('address_1') + "<br>" +
-                        event.feature.getProperty('city') + ", " + event.feature.getProperty('state') + " " + event.feature.getProperty('zip') + "<br>" +
-                        event.feature.getProperty('evacuation_capacity') + "<br>" +
-                        event.feature.getProperty('wheelchair_accessible') + "<br>" +
-                        event.feature.getProperty('generator_onsite') + "<br>" +
-                        event.feature.getProperty('self_sufficient_electricity') +"<br>" +
-                        event.feature.getProperty('shelter_status') + "<br>" +
-                        event.feature.getProperty('facility_type') + "<br>" +
-                        event.feature.getProperty('subfacility_code') ;
+                    var myHTML = "Shelter Name: " + event.feature.getProperty('shelter_name') + "<br>" + 
+                        "Address: " + event.feature.getProperty('address_1') + "<br>" +
+                        "City: " + event.feature.getProperty('city') + ", " + event.feature.getProperty('state') + " " + event.feature.getProperty('zip') + "<br>" +
+                        "Evacuation capacity: " + event.feature.getProperty('evacuation_capacity') + "<br>" +
+                        "Wheelchair access: " + event.feature.getProperty('wheelchair_accessible') + "<br>" +
+                        "Generatory onsite: " + event.feature.getProperty('generator_onsite') + "<br>" +
+                        " Self sufficient electricity: " + event.feature.getProperty('self_sufficient_electricity') +"<br>" +
+                        "Shelter status: " + event.feature.getProperty('shelter_status') + "<br>" +
+                        "Facility type: " + event.feature.getProperty('facility_type') + "<br>" +
+                        "Sub facility code: " + event.feature.getProperty('subfacility_code') ;
                     infoWindow.setContent("<div style='width:150px; text-align: center;'>" + myHTML + "</div>");
                     infoWindow.setPosition(event.feature.getGeometry().get());
                     infoWindow.setOptions({pixelOffset: new google.maps.Size(0,-30)});
                     infoWindow.open(map);
                 });
-
-                        
-                
-                map.data.setStyle(function(feature) {
-                    var isShelter = feature.getProperty('isShelter');
-                    var zoom = map.getZoom();
-                    var zoomThreshold = 12;
-                    
-                    if (isShelter && zoom >= zoomThreshold) {
-                        return {
-                            visible: true,
-                            icon: {
-                                path: google.maps.SymbolPath.CIRCLE,
-                                fillColor: 'blue',
-                                fillOpacity: 1,
-                                strokeColor: 'blue',
-                                strokeOpacity: 1,
-                                scale: 5 //pixels , default is 3 , adjust according to change the size of the marker
-                            }
-                        };
-                    } else if (isShelter) {
-                        return {
-                            visible: false
-                        };
-                    }
-
-                });
-                google.maps.event.addListener(map, 'zoom_changed', function() {
-                    map.data.setStyle(map.data.getStyle());
-                });
-
             }
             // Fetch telemetry data every 10 seconds
             setInterval(fetchTelemetry, 100000);
@@ -309,11 +294,14 @@
         }
     </script>
     <!-- Google Maps JavaScript API -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDpTRDyepqe9o-aHCfjSv95m1QiSEHveiA&callback=initMap" async defer></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDpTRDyepqe9o-aHCfjSv95m1QiSEHveiA&libraries=geometry&callback=initMap" async defer></script>
 </head>
 <body>
-    <h1>Severe Weather Tracker and Shelter Locations</h1>
+    <h1>Severe Weather Tracker and Shelter Locations 
+        (must zoom in to see shelter markers) </h1>
     <h2>Weather in {{ weather.city }}</h2>
+    <p>Weather Description: {{ weather.weather_description }}</p>
+    <img src="{{ weather.weather_icon }}" alt="Weather icon" width="100" height="100">
     <p>Temperature: {{ weather.temperature }} degrees F</p>
     <p>Humidity: {{ weather.humidity }}%</p>
     <p>Pressure: {{ weather.pressure }} inHg</p>
@@ -333,7 +321,7 @@
 <!-- Chat Interface -->
 <div id="chat-container">
     <div id="chat-output"></div>
-    <input type="text" id="chat-input" placeholder="Ask about the weather...">
+    <input type="text" id="chat-input" placeholder="Ask about weather or weather safety...">
     <button onclick="sendChat()">Send</button>
 </div>
 </html>

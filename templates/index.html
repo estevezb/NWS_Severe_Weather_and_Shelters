@@ -7,7 +7,7 @@
     <link href="{{ url_for('static', filename='styles/style.css') }}" rel="stylesheet"/>
 </head>
 <body>
-    <h1>Check Severe Weather</h1>
+    <h1>Check Severe Weather Map</h1>
     <!-- Display flash messages -->
     {% with messages = get_flashed_messages() %}
         {% if messages %}
@@ -40,13 +40,13 @@
         }
     </style>
         <!-- New Address Input for Geocoding -->
-        <label for="address"> Input address to see it on Google map (Enter in this format: 1234 clear lake road, Houston, TX 77058 ):</label>
+        <label for="address"> Input address (example: 1234 clear lake road, Houston, TX 77058 ):</label>
         <input type="text" id="address" name="address" placeholder="Enter your address">  <!-- This is where user can input address -->
 
         <!-- Selection for GPS Source -->
         <select id="gpsSource" name="gpsSource">
-            <option value="address">Use my inputted address(recommended)</option>
-            <option value="drone">Use a connected Drone's GPS</option>
+            <option value="address">Use my inputted address (recommended)</option>
+            <option value="drone">Use a connected Drone's GPS (coming soon...)</option>
         </select>
         <style>
 
@@ -73,7 +73,7 @@
     <!-- Add loading spinner -->
     <div id="loading" style="display: none;">
         <div class="spinner"></div>
-        <p>Loading, please wait...</p>
+        <p>Loading, map please wait...</p>
     </div>
     <style>
         #loading {
