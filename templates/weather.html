@@ -212,7 +212,7 @@
                 console.log('loadShelterData called'); // Debugging log
 
                 // Load GeoJSON data from the server
-                var url = '/static/data/National_Shelter_System_Facilities.geojson';
+                var url = 'https://storage.googleapis.com/shelterdata_bucket/National_Shelter_System_Facilities.geojson';//shelterdata_bucket/National_Shelter_System_Facilities.geojson
                 map.data.loadGeoJson(url, null, function(features) {
                     console.log("GeoJSON features loaded:", features); // Debugging log
 
