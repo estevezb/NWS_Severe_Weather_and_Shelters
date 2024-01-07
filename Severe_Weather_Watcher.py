@@ -313,7 +313,7 @@ def send_chat():
         print(f"Error in OpenAI API call: {e}")  # Log the error for debugging
         return jsonify({'error': str(e)}), 500
 
-if __name__ == "__main__":
+#if __name__ == "__main__":
     # Start the background thread
     # Start the Flask app
     #threading.Thread(target=fetch_telemetry, daemon=True).start()
