@@ -317,4 +317,4 @@ if __name__ == "__main__":
     # Start the background thread
     # Start the Flask app
     #threading.Thread(target=fetch_telemetry, daemon=True).start()
-    app.run(host='0.0.0.0', port=5800, debug=False)
+    # app.run(host='0.0.0.0', port=5800, debug=False)
