@@ -8,6 +8,12 @@ import openai
 import os
 from geopy.geocoders import Nominatim
 from time import sleep
+import json
+
+
+
+
+
 
 def load_api_key(env_var_name):
     api_key = os.getenv(env_var_name)
